@@ -1,21 +1,22 @@
-import 'package:flutter/material.dart';
-import 'package:frontend/notes/get_notes.dart';
 import 'package:dio/dio.dart';
+import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:frontend/notes/get_notes.dart';
 
-class CreateNotesScreen extends StatefulWidget {
-  const CreateNotesScreen({super.key});
+class UpdateNoteScreen extends StatefulWidget {
+  final String noteId;
+
+  const UpdateNoteScreen({super.key, required this.noteId});
 
   @override
   // ignore: library_private_types_in_public_api
-  _CreateNotesScreenState createState() => _CreateNotesScreenState();
+  _UpdateNoteScreenState createState() => _UpdateNoteScreenState();
 }
 
-class _CreateNotesScreenState extends State<CreateNotesScreen> {
+class _UpdateNoteScreenState extends State<UpdateNoteScreen> {
   TextEditingController name = TextEditingController();
   TextEditingController description = TextEditingController();
   String? accessToken;
-
   bool isValid = false;
   bool isLoading = false;
 
@@ -23,6 +24,7 @@ class _CreateNotesScreenState extends State<CreateNotesScreen> {
   void initState() {
     super.initState();
     _loadAccessToken();
+    _getNotesById();
   }
 
   void _loadAccessToken() async {
@@ -38,26 +40,57 @@ class _CreateNotesScreenState extends State<CreateNotesScreen> {
     });
   }
 
-  void createNotes(String name, String description, String accessToken) async {
+  void _getNotesById() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+
+    setState(() {
+      isLoading = true;
+    });
+
+    try {
+      final response = await Dio().get(
+        'http://localhost:3000/notes/${widget.noteId}',
+        options: Options(
+          headers: {
+            'Authorization': 'Bearer ${prefs.getString('accessToken')}',
+          },
+        ),
+      );
+
+      if (response.statusCode == 200) {
+        setState(() {
+          name.text = response.data['name'];
+          description.text = response.data['description'];
+        });
+      }
+    } catch (e) {
+      print(e);
+    } finally {
+      setState(() {
+        isLoading = false;
+      });
+    }
+
+    _validateInputs();
+  }
+
+  void _updateTour(String name, String description, String accessToken) async {
     try {
       setState(() {
         isLoading = true;
       });
 
-      final response = await Dio().post(
-        'http://localhost:3000/notes',
+      final response = await Dio().patch(
+        'http://localhost:3000/notes/${widget.noteId}',
         data: {'name': name, 'description': description},
         options: Options(headers: {'Authorization': 'Bearer $accessToken'}),
       );
-      if (response.statusCode == 201) {
+
+      if (response.statusCode == 200) {
         Navigator.push(
           context,
           MaterialPageRoute(builder: (context) => const GetNotesScreen()),
         );
-
-        setState(() {
-          isLoading = false;
-        });
       }
     } catch (e) {
       print(e);
@@ -72,16 +105,7 @@ class _CreateNotesScreenState extends State<CreateNotesScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Buat Notes', style: TextStyle(color: Colors.black)),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.black),
-          onPressed: () {
-            Navigator.pushReplacement(
-              context,
-              MaterialPageRoute(builder: (context) => const GetNotesScreen()),
-            );
-          },
-        ),
+        title: const Text('Edit Note', style: TextStyle(color: Colors.black)),
       ),
       body: SingleChildScrollView(
         child: Center(
@@ -92,9 +116,9 @@ class _CreateNotesScreenState extends State<CreateNotesScreen> {
                 widthFactor: 0.7,
                 child: TextField(
                   controller: name,
-                  onChanged: (value) => _validateInputs(),
+                  onChanged: (_) => _validateInputs(),
                   decoration: const InputDecoration(
-                    labelText: 'Masukan nama ',
+                    labelText: 'Masukan nama',
                     border: OutlineInputBorder(),
                   ),
                 ),
@@ -104,7 +128,7 @@ class _CreateNotesScreenState extends State<CreateNotesScreen> {
                 widthFactor: 0.7,
                 child: TextField(
                   controller: description,
-                  onChanged: (value) => _validateInputs(),
+                  onChanged: (_) => _validateInputs(),
                   decoration: const InputDecoration(
                     labelText: 'Masukan deskripsi',
                     border: OutlineInputBorder(),
@@ -119,7 +143,7 @@ class _CreateNotesScreenState extends State<CreateNotesScreen> {
                       isLoading
                           ? null
                           : isValid
-                          ? () => createNotes(
+                          ? () => _updateTour(
                             name.text,
                             description.text,
                             accessToken!,
@@ -147,12 +171,9 @@ class _CreateNotesScreenState extends State<CreateNotesScreen> {
                             ),
                           )
                           : const Padding(
-                            padding: EdgeInsets.symmetric(
-                              horizontal: 40,
-                              vertical: 12,
-                            ),
+                            padding: EdgeInsets.symmetric(vertical: 14),
                             child: Text(
-                              'Simpan data',
+                              'Simpan perubahan data',
                               style: TextStyle(color: Colors.white),
                             ),
                           ),

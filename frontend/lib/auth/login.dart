@@ -1,13 +1,14 @@
-import 'package:flutter/material.dart';
 import 'package:dio/dio.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter/material.dart';
 import 'package:frontend/auth/register.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:frontend/notes/get_notes.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
 
   @override
+  // ignore: library_private_types_in_public_api
   _LoginScreenState createState() => _LoginScreenState();
 }
 
@@ -43,19 +44,53 @@ class _LoginScreenState extends State<LoginScreen> {
         data: {'username': username.text, 'password': password.text},
       );
 
-      if (response.statusCode == 200) {
-        await setAccessToken(response.data['access_token']);
+      print(response.data);
 
-        // Navigasi langsung ke halaman GetNotesScreen
+      if (response.statusCode == 200) {
+        setAccessToken(response.data['access_token']);
+
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(builder: (context) => const GetNotesScreen()),
         );
-      } else {
-        showError('Login gagal. Status: ${response.statusCode}');
+
+        showDialog(
+          context: context,
+          builder: (BuildContext context) {
+            return AlertDialog(
+              title: const Text('Success'),
+              content: const Text('Login berhasil'),
+              actions: <Widget>[
+                TextButton(
+                  onPressed: () {
+                    Navigator.of(context).pop();
+                  },
+                  child: const Text('OK'),
+                ),
+              ],
+            );
+          },
+        );
       }
     } catch (e) {
-      showError('Terjadi kesalahan: $e');
+      print(e);
+      showDialog(
+        context: context,
+        builder: (BuildContext context) {
+          return AlertDialog(
+            title: const Text('Error'),
+            content: const Text('Terjadi kesalahan saat melakukan login'),
+            actions: <Widget>[
+              TextButton(
+                onPressed: () {
+                  Navigator.of(context).pop();
+                },
+                child: const Text('OK'),
+              ),
+            ],
+          );
+        },
+      );
     } finally {
       setState(() {
         isLoading = false;
@@ -63,26 +98,9 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
-  Future<void> setAccessToken(String token) async {
+  void setAccessToken(String token) async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     prefs.setString('accessToken', token);
-  }
-
-  void showError(String message) {
-    showDialog(
-      context: context,
-      builder:
-          (context) => AlertDialog(
-            title: const Text('Error'),
-            content: Text(message),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(context).pop(),
-                child: const Text('OK'),
-              ),
-            ],
-          ),
-    );
   }
 
   @override
