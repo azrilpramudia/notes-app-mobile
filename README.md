@@ -64,7 +64,7 @@ Default base URL backend:
 http://localhost:3000
 ```
 
-> 🔁 Sesuaikan base URL pada file `lib/services/api.dart` di Flutter jika berbeda.
+> 🔁 Sesuaikan base URL pada file `lib/auth/login & lib/auth/register` di Flutter jika berbeda.
 
 ---
 
